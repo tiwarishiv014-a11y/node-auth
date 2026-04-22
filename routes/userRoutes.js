@@ -4,13 +4,14 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
+import { registervalidation, loginvalidation, updatevalidation, validate } from '../validator/userValidator.js';
 
 const router = express.Router();
 const SECRET_KEY = "your_secret_key"; // In production, use environment variables to store secrets
 
 
 // REGISTER
-router.post('/register', async (req, res) => {
+router.post('/register', registervalidation, validate, async (req, res) => {
     try {
         const{name, password,email,phone,address,gender,role}= req.body;
         if (!name || !email || !password || !phone || !address || !gender || !role) {
@@ -62,7 +63,7 @@ router.post('/register', async (req, res) => {
 //     }
 // });
 
-router.post('/update', authMiddleware, async (req, res) => {
+router.post('/update',  authMiddleware, updatevalidation, validate, async (req, res) => {
     try {
         // 🔍 get phone from token (set by authMiddleware)
         const phone = req.user.phone;
@@ -127,7 +128,7 @@ router.get('/users', async (req, res) => {
 
 // LOGIN
 
-router.post('/login', async (req, res) => {
+router.post('/login', loginvalidation, validate, async (req, res) => {
     const { email, password } = req.body;
 
 
