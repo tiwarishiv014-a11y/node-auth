@@ -1,7 +1,7 @@
 import User from "../models/User";
 import bcrypt from "bcrypt";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.js";
-import authMiddleware from "../middleware/authMiddleware";
+
 
 // REGISTER
 export const register = async (req, res) => {
@@ -91,7 +91,7 @@ export const update = async (req, res) => {
 };
 
 // GET USERS
-export const Users = async (req, res) => {
+export const getUsers = async (req, res) => {
     try {
         const users = await User.find();
         res.json(users);

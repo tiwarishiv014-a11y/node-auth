@@ -1,4 +1,4 @@
-import e from 'express';
+import express from 'express';
 import {body, validationResult} from 'express-validator';
 
 export const registervalidation =[
@@ -29,7 +29,7 @@ export const updatevalidation =[
     body('address').optional().notEmpty().withMessage('Address cannot be empty')];
 
     export const validate = (req, res, next) => {
-        const errors = validationresult(req); 
+        const errors = validationResult(req); 
         if (!errors.isEmpty()) {
         return res.status(400).json({
             message: "Validation failed",
