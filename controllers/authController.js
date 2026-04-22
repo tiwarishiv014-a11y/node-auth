@@ -34,7 +34,7 @@ export const register = async (req, res) => {
 
         res.json({ message: "User created successfully" });
     } catch (err) {
-        res.json({ error: err.message });
+        next(err);
     }
 };
 // UPDATE USER
@@ -87,7 +87,7 @@ export const update = async (req, res) => {
         res.json({ message: "User updated successfully", user });
 
     } catch (err) {
-        res.status(500).json({ error: err.message });
+        next(err);
     }
 };
 
@@ -147,7 +147,7 @@ user.refreshToken = refreshToken;
         
 
     } catch (err) {
-        res.json({ error: err.message });
+        next(err);
     }
 };
 
@@ -163,7 +163,7 @@ export const logout = async (req, res) => {
         );
         res.json({message:"Logged out successfully"});
     } catch (err) {
-        res.status(500).json({error: err.message });
+        next(err);
     }
     };
 
@@ -202,6 +202,22 @@ export const refresh = async (req, res) => {
 
     } catch (err) {
         res.status(403).json({ message: "Invalid or expired refresh token" });
+    }
+};
+
+export const getProfile = async (req, res) => {
+    try{
+        const phone = req.user.phone;
+        const user = await User.findOne({phone
+            }).select('-password -refreshToken');
+
+            if (!user){
+                return res.status(404).json({messahe:"User not found"});
+            }
+            res.json(user);
+    }catch(err){
+        next(err);
+        
     }
 };
 

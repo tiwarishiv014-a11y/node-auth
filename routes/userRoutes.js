@@ -18,9 +18,11 @@ router.post('/update', authMiddleware, updatevalidation, validate, authControlle
 router.post('/logout', authMiddleware, authController.logout);
 router.post('/refresh', authController.refresh);
 router.get('/users', authController.getUsers);
+router.get('/profile', authMiddleware, authController.getProfile);
+
+export default router;
 
 
 
 
     
-export default router;
