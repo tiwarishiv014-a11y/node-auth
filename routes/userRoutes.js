@@ -5,6 +5,7 @@ import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { registervalidation, loginvalidation, updatevalidation, validate } from '../validator/userValidator.js';
+import * as authController from '../controllers/authController.js';
 
 const router = express.Router();
 // const SECRET_KEY = "your_secret_key"; // In production, use environment variables to store secrets
