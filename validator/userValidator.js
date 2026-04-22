@@ -1,5 +1,5 @@
 import e from 'express';
-import {body, validationresult} from 'express-validator';
+import {body, validationResult} from 'express-validator';
 
 export const registervalidation =[
     body('name').notEmpty().withMessage('Name is required'),
