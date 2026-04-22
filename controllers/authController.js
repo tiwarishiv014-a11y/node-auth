@@ -2,6 +2,7 @@ import User from '../models/User.js';
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
+import AppError from '../utils/AppError.js';
 
 // REGISTER
 export const register = async (req, res) => {

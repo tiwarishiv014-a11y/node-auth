@@ -4,6 +4,7 @@ dotenv.config();
 import express from 'express';
 import mongoose from 'mongoose';
 import userRoutes from './routes/userRoutes.js';
+import errorHandler from './middleware/errorHandler.js';
 
 const app = express();
 
@@ -28,3 +29,6 @@ app.get('/', (req, res) => {
 app.listen(3000, () => {
     console.log("http://localhost:3000");
 });
+
+// Error handling middleware
+app.use(errorHandler);
