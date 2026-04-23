@@ -1,33 +1,70 @@
-# Node.js Authentication API
+# 🔐 Node.js Authentication API
+
+A production-ready backend authentication system built using Node.js, Express, MongoDB, and JWT.  
+This project follows **MVC architecture**, includes **secure authentication**, **file upload**, and **centralized error handling**.
+
+---
 
 ## 🚀 Features
-- Register, Login, Logout
-- JWT (Access + Refresh Token)
-- Protected routes (middleware)
-- Input validation (express-validator)
-- Secure password hashing (bcrypt)
+
+- ✅ User Registration (bcrypt password hashing)
+- ✅ Login with JWT (Access + Refresh Tokens)
+- ✅ Secure Logout (invalidate refresh token)
+- ✅ Refresh Token system
+- ✅ Update user profile
+- ✅ Get user profile (protected)
+- ✅ Upload profile picture (Multer)
+- ✅ Input validation (express-validator)
+- ✅ MVC Architecture
+- ✅ Centralized Error Handling
+
+---
 
 ## 🛠️ Tech Stack
-Node.js, Express, MongoDB, Mongoose
 
-## 📦 API Endpoints
-POST /api/auth/register
-POST /api/auth/login
-POST /api/auth/refresh-token
-POST /api/auth/logout
-GET  /api/auth/users
+- Node.js
+- Express.js
+- MongoDB + Mongoose
+- JWT (Authentication)
+- bcrypt (Password hashing)
+- express-validator (Validation)
+- multer (File upload)
 
-## 🔐 Security Features
-- Password hashing (bcrypt)
-- Token-based authentication
-- Middleware protection
-- Input validation
+---
 
-## ⚙️ Setup
+## 📁 Project Structure
+project/
+├── controllers/ # Business logic
+├── models/ # Database schema
+├── routes/ # API routes
+├── middleware/ # Auth, error, upload
+├── validator/ # Input validation
+├── utils/ # Tokens & custom error
+├── uploads/ # Uploaded files
+├── index.js # Entry point
+
+
+---
+
+## 🔐 API Endpoints
+
+| Method | Endpoint              | Description              | Auth |
+|--------|----------------------|--------------------------|------|
+| POST   | /api/register        | Register user            | ❌   |
+| POST   | /api/login           | Login user               | ❌   |
+| POST   | /api/update          | Update user              | ✅   |
+| GET    | /api/profile         | Get profile              | ✅   |
+| POST   | /api/upload-picture  | Upload profile image     | ✅   |
+| POST   | /api/logout          | Logout user              | ✅   |
+| POST   | /api/refresh         | Refresh access token     | ❌   |
+| GET    | /api/users           | Get all users            | ❌   |
+
+---
+
+## ⚙️ Installation
+
+```bash
+git clone https://github.com/tiwarishiv014-a11y/node-auth.git
+cd node-auth
 npm install
 npm run dev
-
-## 🌐 Environment Variables
-MONGO_URI=
-JWT_SECRET=
-REFRESH_SECRET=
