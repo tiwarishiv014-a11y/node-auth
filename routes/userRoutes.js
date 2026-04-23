@@ -6,6 +6,7 @@ import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
 import { registervalidation, loginvalidation, updatevalidation, validate } from '../validator/userValidator.js';
 import * as authController from '../controllers/authController.js';
+import upload from '../middleware/upload.js';
 
 const router = express.Router();
 // const SECRET_KEY = "your_secret_key"; // In production, use environment variables to store secrets
@@ -20,6 +21,8 @@ router.post('/refresh', authController.refresh);
 router.get('/users', authController.getUsers);
 router.get('/profile', authMiddleware, authController.getProfile);
 
+
+router.post('/upload-picture', authMiddleware, upload.single('profilePicture'), authController.uploadPicture);
 export default router;
 
 

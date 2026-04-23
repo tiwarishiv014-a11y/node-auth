@@ -221,5 +221,36 @@ export const getProfile = async (req, res) => {
     }
 };
 
+// ✅ POST /upload-picture
+export const uploadPicture = async (req, res, next) => {
+    try {
+        // multer saves file and puts info in req.file
+        if (!req.file) {
+            return next(new AppError("No file uploaded", 400));
+        }
 
+        const phone = req.user.phone;
 
+        // save file path to DB
+        const filePath = req.file.path;
+
+        const user = await User.findOneAndUpdate(
+            { phone },
+            { profilePicture: filePath },
+            { new: true }
+        ).select('-password -refreshToken');
+
+        if (!user) {
+            return next(new AppError("User not found", 404));
+        }
+
+        res.status(200).json({
+            message: "Profile picture uploaded successfully",
+            profilePicture: filePath,
+            user
+        });
+
+    } catch (err) {
+        next(err);
+    }
+};
