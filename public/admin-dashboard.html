@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Dashboard — node-auth</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Syne:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:       #0e0f11;
+    --surface:  #16181c;
+    --surface2: #1e2026;
+    --border:   #2a2d35;
+    --text:     #e8eaf0;
+    --muted:    #6b7280;
+    --accent:   #7c6dfa;
+    --green:    #22c55e;
+    --amber:    #f59e0b;
+    --red:      #ef4444;
+    --mono:     'JetBrains Mono', monospace;
+    --sans:     'Syne', sans-serif;
+  }
+
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); min-height: 100vh; }
+
+  /* ── LAYOUT ── */
+  .shell { display: grid; grid-template-columns: 220px 1fr; min-height: 100vh; }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 2rem 1.25rem;
+    display: flex; flex-direction: column; gap: 2rem;
+    position: sticky; top: 0; height: 100vh;
+  }
+  .logo { font-size: 13px; font-family: var(--mono); color: var(--accent); letter-spacing: 0.05em; }
+  .logo span { color: var(--muted); }
+  .nav { display: flex; flex-direction: column; gap: 4px; }
+  .nav-item {
+    padding: 8px 12px; border-radius: 8px; font-size: 13px; cursor: pointer;
+    color: var(--muted); display: flex; align-items: center; gap: 10px;
+    transition: all 0.15s; border: none; background: none; width: 100%; text-align: left;
+  }
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active { background: var(--surface2); color: var(--text); }
+  .nav-item .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--border); flex-shrink: 0; }
+  .nav-item.active .dot { background: var(--accent); }
+  .sidebar-footer { margin-top: auto; font-size: 11px; font-family: var(--mono); color: var(--muted); }
+
+  /* ── MAIN ── */
+  .main { padding: 2rem; overflow-x: hidden; }
+  .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; }
+  .page-title { font-size: 20px; font-weight: 600; }
+  .page-title span { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; font-family: var(--mono); }
+  .api-status { display: flex; align-items: center; gap: 8px; font-size: 12px; font-family: var(--mono); color: var(--muted); }
+  .api-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* ── METRICS ── */
+  .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 2rem; }
+  .metric {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem;
+  }
+  .metric-label { font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.08em; }
+  .metric-val { font-size: 28px; font-weight: 600; font-family: var(--mono); }
+  .metric-val.c-white  { color: var(--text); }
+  .metric-val.c-amber  { color: var(--amber); }
+  .metric-val.c-green  { color: var(--green); }
+  .metric-val.c-red    { color: var(--red); }
+
+  /* ── LOGIN PANEL ── */
+  .login-panel {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 2rem; max-width: 380px; margin: 4rem auto;
+  }
+  .login-panel h2 { font-size: 16px; margin-bottom: 6px; }
+  .login-panel p  { font-size: 12px; color: var(--muted); margin-bottom: 1.5rem; font-family: var(--mono); }
+  .field { margin-bottom: 1rem; }
+  .field label { display: block; font-size: 11px; font-family: var(--mono); color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .field input {
+    width: 100%; padding: 9px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 13px; outline: none;
+  }
+  .field input:focus { border-color: var(--accent); }
+  .btn-primary {
+    width: 100%; padding: 10px; background: var(--accent); border: none; border-radius: 8px;
+    color: #fff; font-family: var(--sans); font-size: 14px; font-weight: 500; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  /* ── TABLE AREA ── */
+  .table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-toolbar { display: flex; gap: 10px; align-items: center; padding: 1rem 1.25rem; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
+  .search-input {
+    flex: 1; min-width: 160px; padding: 7px 12px; background: var(--surface2);
+    border: 1px solid var(--border); border-radius: 8px; color: var(--text);
+    font-family: var(--mono); font-size: 12px; outline: none;
+  }
+  .search-input:focus { border-color: var(--accent); }
+  .filter-select {
+    padding: 7px 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 12px; outline: none; cursor: pointer;
+  }
+  .refresh-btn {
+    padding: 7px 14px; background: transparent; border: 1px solid var(--border);
+    border-radius: 8px; color: var(--muted); font-family: var(--mono); font-size: 12px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .refresh-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; table-layout: fixed; }
+  th {
+    padding: 10px 16px; text-align: left; font-size: 10px; font-family: var(--mono);
+    color: var(--muted); text-transform: uppercase; letter-spacing: 0.1em;
+    border-bottom: 1px solid var(--border); font-weight: 400;
+  }
+  td { padding: 12px 16px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+
+  .badge {
+    display: inline-block; padding: 3px 9px; border-radius: 99px;
+    font-size: 10px; font-family: var(--mono); font-weight: 500; letter-spacing: 0.05em;
+  }
+  .badge.pending  { background: rgba(245,158,11,0.12); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+  .badge.approved { background: rgba(34,197,94,0.12);  color: var(--green); border: 1px solid rgba(34,197,94,0.25); }
+  .badge.rejected { background: rgba(239,68,68,0.12);  color: var(--red);   border: 1px solid rgba(239,68,68,0.25); }
+  .badge.admin    { background: rgba(124,109,250,0.12); color: var(--accent);border: 1px solid rgba(124,109,250,0.25); }
+
+  .act-btn {
+    padding: 4px 10px; border-radius: 6px; font-size: 11px; font-family: var(--mono);
+    cursor: pointer; border: 1px solid; transition: all 0.15s; margin-right: 4px;
+  }
+  .act-approve { background: rgba(34,197,94,0.08); color: var(--green); border-color: rgba(34,197,94,0.3); }
+  .act-approve:hover { background: rgba(34,197,94,0.2); }
+  .act-reject  { background: rgba(239,68,68,0.08); color: var(--red);   border-color: rgba(239,68,68,0.3); }
+  .act-reject:hover  { background: rgba(239,68,68,0.2); }
+  .act-btn:disabled { opacity: 0.25; cursor: not-allowed; }
+
+  .tab-row { display: flex; gap: 2px; padding: 0 1.25rem; border-bottom: 1px solid var(--border); }
+  .tab {
+    padding: 10px 14px; font-size: 12px; font-family: var(--mono); cursor: pointer;
+    border: none; background: none; color: var(--muted); border-bottom: 2px solid transparent;
+    margin-bottom: -1px; transition: all 0.15s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--text); border-bottom-color: var(--accent); }
+
+  .empty-state { padding: 3rem; text-align: center; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+
+  /* ── OTP STEP ── */
+  .otp-input {
+    width: 100%; padding: 12px; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: var(--mono); font-size: 20px;
+    letter-spacing: 0.3em; text-align: center; outline: none;
+  }
+  .otp-input:focus { border-color: var(--accent); }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed; bottom: 1.5rem; right: 1.5rem; display: none;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 16px; font-size: 12px; font-family: var(--mono); color: var(--text);
+    z-index: 999; animation: slideup 0.2s ease;
+  }
+  @keyframes slideup { from{transform:translateY(8px);opacity:0} to{transform:translateY(0);opacity:1} }
+
+  /* ── LOADING ── */
+  .loader { text-align: center; padding: 2rem; font-family: var(--mono); font-size: 12px; color: var(--muted); }
+  .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; margin-right: 8px; vertical-align: middle; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── ERROR ── */
+  .error-box { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.25); border-radius: 8px; padding: 10px 14px; font-size: 12px; font-family: var(--mono); color: var(--red); margin-bottom: 1rem; }
+
+  .hidden { display: none !important; }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════ LOGIN / OTP ═══════════════ -->
+<div id="auth-screen">
+  <!-- STEP 1: Phone -->
+  <div id="step-phone" style="padding:2rem;">
+    <div class="login-panel">
+      <h2>Admin login</h2>
+      <p>node-auth dashboard</p>
+      <div id="phone-error" class="error-box hidden"></div>
+      <div class="field">
+        <label>Phone number</label>
+        <input type="text" id="inp-phone" placeholder="9999999999" maxlength="10">
+      </div>
+      <button class="btn-primary" id="btn-send-otp" onclick="sendOTP()">Send OTP</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: OTP -->
+  <div id="step-otp" class="hidden" style="padding:2rem;">
+    <div class="login-panel">
+      <h2>Enter OTP</h2>
+      <p id="otp-hint">Check your phone</p>
+      <div id="otp-error" class="error-box hidden"></div>
+      <div class="field">
+        <label>6-digit OTP</label>
+        <input type="text" class="otp-input" id="inp-otp" placeholder="000000" maxlength="6">
+      </div>
+      <button class="btn-primary" id="btn-verify-otp" onclick="verifyOTP()">Verify & Login</button>
+      <p style="margin-top:1rem;font-size:11px;font-family:var(--mono);color:var(--muted);text-align:center;cursor:pointer;" onclick="goBack()">← Back</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════ DASHBOARD ════════════════ -->
+<div id="dashboard-screen" class="hidden">
+  <div class="shell">
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="logo">node<span>-auth</span> / admin</div>
+      <nav class="nav">
+        <button class="nav-item active" onclick="setPage('users')"><span class="dot"></span>All users</button>
+        <button class="nav-item" onclick="setPage('pending')"><span class="dot"></span>Pending</button>
+        <button class="nav-item" onclick="setPage('approved')"><span class="dot"></span>Approved</button>
+        <button class="nav-item" onclick="setPage('rejected')"><span class="dot"></span>Rejected</button>
+      </nav>
+      <div class="sidebar-footer">
+        <div id="admin-phone" style="margin-bottom:4px;"></div>
+        <div style="cursor:pointer;color:var(--red);" onclick="logout()">logout →</div>
+      </div>
+    </aside>
+
+    <!-- Main -->
+    <main class="main">
+      <div class="topbar">
+        <div class="page-title" id="page-title">All users <span id="page-count"></span></div>
+        <div class="api-status"><span class="api-dot"></span><span id="api-url">localhost:3000</span></div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics">
+        <div class="metric"><div class="metric-label">total</div><div class="metric-val c-white" id="m-total">—</div></div>
+        <div class="metric"><div class="metric-label">pending</div><div class="metric-val c-amber" id="m-pending">—</div></div>
+        <div class="metric"><div class="metric-label">approved</div><div class="metric-val c-green" id="m-approved">—</div></div>
+        <div class="metric"><div class="metric-label">rejected</div><div class="metric-val c-red" id="m-rejected">—</div></div>
+      </div>
+
+      <!-- Table Card -->
+      <div class="table-card">
+        <div class="tab-row">
+          <button class="tab active" onclick="setPage('users')">all</button>
+          <button class="tab" onclick="setPage('pending')">pending</button>
+          <button class="tab" onclick="setPage('approved')">approved</button>
+          <button class="tab" onclick="setPage('rejected')">rejected</button>
+        </div>
+        <div class="table-toolbar">
+          <input class="search-input" id="search" placeholder="search phone or name..." oninput="renderTable()">
+          <select class="filter-select" id="role-filter" onchange="renderTable()">
+            <option value="">all roles</option>
+            <option value="user">user</option>
+            <option value="admin">admin</option>
+          </select>
+          <button class="refresh-btn" onclick="loadUsers()">↻ refresh</button>
+        </div>
+        <div id="table-wrap">
+          <div class="loader"><span class="spinner"></span>loading users...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────────────
+const API = 'http://localhost:3000/api';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let accessToken = localStorage.getItem('admin_token') || '';
+let adminPhone  = localStorage.getItem('admin_phone') || '';
+let allUsers    = [];
+let currentPage = 'users';
+let currentPhone = '';
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+if (accessToken) {
+  showDashboard();
+} else {
+  show('auth-screen');
+}
+
+// ── AUTH FLOW ─────────────────────────────────────────────────────────────────
+async function sendOTP() {
+  const phone = document.getElementById('inp-phone').value.trim();
+  if (!phone || phone.length < 10) return showError('phone-error', 'Enter a valid 10-digit phone number');
+  hideError('phone-error');
+
+  const btn = document.getElementById('btn-send-otp');
+  btn.disabled = true; btn.textContent = 'Sending...';
+
+  try {
+    const res  = await fetch(`${API}/login`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone })
+    });
+    const data = await res.json();
+
+    if (!res.ok) return showError('phone-error', data.error || data.message || 'Error');
+
+    if (data.status === 'pending') return showError('phone-error', 'This account is pending admin approval.');
+    if (data.status === 'rejected') return showError('phone-error', 'This account has been rejected.');
+
+    currentPhone = phone;
+
+    // Dev mode — OTP returned in response
+    if (data.otp) {
+      document.getElementById('otp-hint').textContent = `dev mode — OTP: ${data.otp}`;
+    } else {
+      document.getElementById('otp-hint').textContent = `OTP sent to ${phone}`;
+    }
+
+    document.getElementById('step-phone').classList.add('hidden');
+    document.getElementById('step-otp').classList.remove('hidden');
+
+  } catch (e) {
+    showError('phone-error', 'Cannot connect to server. Is it running?');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Send OTP';
+  }
+}
+
+async function verifyOTP() {
+  const otp = document.getElementById('inp-otp').value.trim();
+  if (otp.length !== 6) return showError('otp-error', 'OTP must be 6 digits');
+  hideError('otp-error');
+
+  const btn = document.getElementById('btn-verify-otp');
+  btn.disabled = true; btn.textContent = 'Verifying...';
+
+  try {
+    const res  = await fetch(`${API}/verify-otp`, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone: currentPhone, otp })
+    });
+    const data = await res.json();
+
+    if (!res.ok) return showError('otp-error', data.error || 'Invalid OTP');
+
+    if (data.user.role !== 'admin') {
+      return showError('otp-error', 'Access denied. Admin accounts only.');
+    }
+
+    accessToken = data.accessToken;
+    adminPhone  = data.user.phone;
+    localStorage.setItem('admin_token', accessToken);
+    localStorage.setItem('admin_phone', adminPhone);
+
+    showDashboard();
+
+  } catch (e) {
+    showError('otp-error', 'Server error. Try again.');
+  } finally {
+    btn.disabled = false; btn.textContent = 'Verify & Login';
+  }
+}
+
+function goBack() {
+  document.getElementById('step-otp').classList.add('hidden');
+  document.getElementById('step-phone').classList.remove('hidden');
+}
+
+// ── DASHBOARD ─────────────────────────────────────────────────────────────────
+function showDashboard() {
+  document.getElementById('auth-screen').classList.add('hidden');
+  document.getElementById('dashboard-screen').classList.remove('hidden');
+  document.getElementById('admin-phone').textContent = adminPhone;
+  loadUsers();
+}
+
+async function loadUsers() {
+  document.getElementById('table-wrap').innerHTML = '<div class="loader"><span class="spinner"></span>loading...</div>';
+
+  try {
+    const res  = await fetch(`${API}/users?limit=100`, {
+      headers: { 'Authorization': `Bearer ${accessToken}` }
+    });
+
+    if (res.status === 401) { logout(); return; }
+
+    const data = await res.json();
+    allUsers = data.users || [];
+    updateMetrics();
+    renderTable();
+
+  } catch (e) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty-state">cannot reach server</div>';
+  }
+}
+
+function updateMetrics() {
+  document.getElementById('m-total').textContent    = allUsers.length;
+  document.getElementById('m-pending').textContent  = allUsers.filter(u => u.status === 'pending').length;
+  document.getElementById('m-approved').textContent = allUsers.filter(u => u.status === 'approved').length;
+  document.getElementById('m-rejected').textContent = allUsers.filter(u => u.status === 'rejected').length;
+}
+
+function setPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach((el, i) => {
+    el.classList.toggle('active', ['users','pending','approved','rejected'][i] === page);
+  });
+  document.querySelectorAll('.tab').forEach((el, i) => {
+    el.classList.toggle('active', ['users','pending','approved','rejected'][i] === page);
+  });
+  const titles = { users:'All users', pending:'Pending approval', approved:'Approved', rejected:'Rejected' };
+  document.getElementById('page-title').innerHTML = `${titles[page]} <span id="page-count"></span>`;
+  renderTable();
+}
+
+function renderTable() {
+  const q      = document.getElementById('search').value.toLowerCase();
+  const role   = document.getElementById('role-filter').value;
+
+  let list = allUsers.filter(u => {
+    if (currentPage !== 'users' && u.status !== currentPage) return false;
+    if (role && u.role !== role) return false;
+    if (q && !(u.phone||'').includes(q) && !(u.name||'').toLowerCase().includes(q)) return false;
+    return true;
+  });
+
+  document.getElementById('page-count').textContent = `(${list.length})`;
+
+  if (!list.length) {
+    document.getElementById('table-wrap').innerHTML = '<div class="empty-state">no users found</div>';
+    return;
+  }
+
+  document.getElementById('table-wrap').innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th style="width:22%">phone</th>
+          <th style="width:22%">name</th>
+          <th style="width:10%">role</th>
+          <th style="width:12%">status</th>
+          <th style="width:16%">joined</th>
+          <th style="width:18%">actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${list.map(u => `
+          <tr>
+            <td style="font-family:var(--mono);font-size:12px">${u.phone || '—'}</td>
+            <td>${u.name || '<span style="color:var(--muted);font-style:italic;font-size:11px">no name yet</span>'}</td>
+            <td><span class="badge ${u.role === 'admin' ? 'admin' : ''}">${u.role}</span></td>
+            <td><span class="badge ${u.status}">${u.status}</span></td>
+            <td style="font-family:var(--mono);font-size:11px;color:var(--muted)">${u.createdAt ? u.createdAt.slice(0,10) : '—'}</td>
+            <td>
+              <button class="act-btn act-approve" ${u.status !== 'pending' ? 'disabled' : ''} onclick="updateStatus('${u.phone}','approved')">approve</button>
+              <button class="act-btn act-reject"  ${u.status !== 'pending' ? 'disabled' : ''} onclick="updateStatus('${u.phone}','rejected')">reject</button>
+            </td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+async function updateStatus(phone, status) {
+  try {
+    const res  = await fetch(`${API}/admin/status`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
+      body: JSON.stringify({ phone, status })
+    });
+    const data = await res.json();
+    if (!res.ok) return showToast('error: ' + (data.error || 'failed'));
+
+    const u = allUsers.find(u => u.phone === phone);
+    if (u) u.status = status;
+    updateMetrics();
+    renderTable();
+    showToast(`${phone} → ${status}`);
+
+  } catch (e) {
+    showToast('server error');
+  }
+}
+
+function logout() {
+  localStorage.removeItem('admin_token');
+  localStorage.removeItem('admin_phone');
+  accessToken = ''; adminPhone = '';
+  document.getElementById('dashboard-screen').classList.add('hidden');
+  document.getElementById('auth-screen').classList.remove('hidden');
+  document.getElementById('step-otp').classList.add('hidden');
+  document.getElementById('step-phone').classList.remove('hidden');
+  document.getElementById('inp-phone').value = '';
+  document.getElementById('inp-otp').value = '';
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────────
+function show(id)      { document.getElementById(id).classList.remove('hidden'); }
+function showError(id, msg) { const el = document.getElementById(id); el.textContent = msg; el.classList.remove('hidden'); }
+function hideError(id)      { document.getElementById(id).classList.add('hidden'); }
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+document.getElementById('inp-phone').addEventListener('keydown', e => { if (e.key === 'Enter') sendOTP(); });
+document.getElementById('inp-otp').addEventListener('keydown',   e => { if (e.key === 'Enter') verifyOTP(); });
+</script>
+</body>
+</html>

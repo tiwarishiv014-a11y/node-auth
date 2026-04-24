@@ -44,7 +44,11 @@ const userSchema = new mongoose.Schema({
 profilePicture: {
     type: String,
     default: null    // stores file path
-}
+},
+status:       { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
+otp:          { type: String, default: null },
+otpExpiry:    { type: Date,   default: null },
+otpAttempts:  { type: Number, default: 0 },
 },
     { timestamps: true 
     

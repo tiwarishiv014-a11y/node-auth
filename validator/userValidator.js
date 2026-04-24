@@ -10,16 +10,10 @@ export const registervalidation =[
     body('gender').notEmpty().withMessage('Gender is required'),
     body('role').notEmpty().withMessage('Role is required'),        
 ];
-export const loginvalidation =[
-    body('email')
-        .notEmpty()
-        .withMessage('Email is required')
-        .isEmail()
-        .withMessage('Must be a valid email'),
-
-    body('password')
-        .notEmpty()
-        .withMessage('Password is required'),
+export const loginvalidation = [
+    body('phone')
+        .notEmpty().withMessage('Phone is required')
+        .isMobilePhone().withMessage('Enter a valid phone number')
 ];
 
 export const updatevalidation =[

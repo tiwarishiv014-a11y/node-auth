@@ -3,6 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import AppError from '../utils/AppError.js';
+import { generateOTP } from '../utils/otp.js';
 
 // REGISTER
 export const register = async (req, res) => {
@@ -92,64 +93,181 @@ export const update = async (req, res) => {
 };
 
 // GET USERS
-export const getUsers = async (req, res) => {
+export const getUsers = async (req, res, next) => {
     try {
-        const users = await User.find();
-        res.json(users);
-    } catch (err) {
-        res.json({ error: err.message });
-    }
+        const page  = parseInt(req.query.page)  || 1;
+        const limit = parseInt(req.query.limit) || 100;
+        const skip  = (page - 1) * limit;
+
+        const filter = {};
+        if (req.query.status) filter.status = req.query.status;
+        if (req.query.role)   filter.role   = req.query.role;
+
+        const total = await User.countDocuments(filter);
+        const users = await User.find(filter)
+            .select('-password -refreshToken -otp -otpExpiry -otpAttempts')
+            .skip(skip)
+            .limit(limit)
+            .sort({ createdAt: -1 });
+
+        res.status(200).json({
+            total,
+            page,
+            totalPages: Math.ceil(total / limit),
+            users    // ← dashboard reads data.users
+        });
+
+    } catch (err) { next(err); }
 };
 
 // LOGIN
 
-export const login = async (req, res) => {
-    const { email, password } = req.body;
+// export const login = async (req, res) => {
+//     const { email, password } = req.body;
 
 
-    try {
-        const user = await User.findOne({ email });
-        if (!user) {
-            return res.json({ message: "Invalid credentials" });
-        }
-        // campare the password
-        const isMatch= await bcrypt.compare(password,user.password);
-        if (!isMatch) {
-            return res.json({message:"password do not match"}); 
-        }
-        const accessToken = generateAccessToken(user);
-const refreshToken = generateRefreshToken(user);
-
-user.refreshToken = refreshToken;
-        await user.save();
-// console.log("Generated refreshToken:", refreshToken);
+//     try {
+//         const user = await User.findOne({ email });
+//         if (!user) {
+//             return res.json({ message: "Invalid credentials" });
+//         }
+//         // campare the password
+//         const isMatch= await bcrypt.compare(password,user.password);
+//         if (!isMatch) {
+//             return res.json({message:"password do not match"}); 
+//         }
+//         const accessToken = generateAccessToken(user);
+// const refreshToken = generateRefreshToken(user);
 
 // user.refreshToken = refreshToken;
+//         await user.save();
+// // console.log("Generated refreshToken:", refreshToken);
 
-// console.log("Before save:", user);
+// // user.refreshToken = refreshToken;
 
-// await user.save();
+// // console.log("Before save:", user);
 
-// console.log("After save:", user);
+// // await user.save();
+
+// // console.log("After save:", user);
 
 
-        if (user) {
-            res.json({ message: "Login successful",
-                accessToken,
-                refreshToken
-            });
-        } 
-        else {
-            res.json({ message: "Invalid credentials"       
+//         if (user) {
+//             res.json({ message: "Login successful",
+//                 accessToken,
+//                 refreshToken
+//             });
+//         } 
+//         else {
+//             res.json({ message: "Invalid credentials"       
 
-            });
-        } 
+//             });
+//         } 
         
 
-    } catch (err) {
-        next(err);
-    }
+//     } catch (err) {
+//         next(err);
+//     }
+// };
+
+export const login = async (req, res, next) => {
+    try {
+        const { phone } = req.body;
+        const user = await User.findOne({ phone });
+
+        // NEW USER → create pending
+        if (!user) {
+            await User.create({ phone, status: 'pending' });
+            return res.status(200).json({
+                message: "Request sent to admin for approval. Please wait.",
+                status: "pending"
+            });
+        }
+
+        // PENDING
+        if (user.status === 'pending')
+            return res.status(403).json({ message: "Awaiting admin approval.", status: "pending" });
+
+        // REJECTED
+        if (user.status === 'rejected')
+            return res.status(403).json({ message: "Account rejected. Contact support.", status: "rejected" });
+
+        // APPROVED → send OTP
+        const otp = generateOTP();
+        user.otp         = otp;
+        user.otpExpiry   = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+        user.otpAttempts = 0;
+        await user.save();
+
+        // DEV MODE → return OTP directly for Postman testing
+        if (process.env.NODE_ENV === 'development') {
+            return res.status(200).json({ message: "OTP sent (dev mode)", status: "otp_sent", otp });
+        }
+
+        res.status(200).json({ message: "OTP sent to your phone.", status: "otp_sent" });
+
+    } catch (err) { next(err); }
 };
+// VERIFY OTP
+export const verifyOtp = async (req, res, next) => {
+    try {
+        const { phone, otp } = req.body;
+        const user = await User.findOne({ phone });
+        if (!user) return next(new AppError("User not found", 404));
+
+        // Too many wrong attempts
+        if (user.otpAttempts >= 3)
+            return next(new AppError("Too many attempts. Login again to get new OTP.", 429));
+
+        // Expired
+        if (!user.otpExpiry || user.otpExpiry < Date.now()) {
+            user.otp = null; user.otpExpiry = null;
+            await user.save();
+            return next(new AppError("OTP expired. Login again.", 400));
+        }
+
+        // Wrong OTP
+        if (user.otp !== otp) {
+            user.otpAttempts += 1;
+            await user.save();
+            return next(new AppError(`Wrong OTP. ${3 - user.otpAttempts} attempts left.`, 400));
+        }
+
+        // SUCCESS
+        user.otp = null; user.otpExpiry = null; user.otpAttempts = 0;
+        const accessToken  = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+        user.refreshToken  = refreshToken;
+        await user.save();
+
+        res.status(200).json({
+            message: "Login successful",
+            accessToken,
+            refreshToken,
+            user: { phone: user.phone, name: user.name, role: user.role }
+        });
+
+    } catch (err) { next(err); }
+};
+// get pending user and update status for admin
+
+export const getPendingUsers = async (req, res, next) => {
+    try {
+        const users = await User.find({ status: 'pending' }).select('-otp -otpExpiry -refreshToken');
+        res.status(200).json({ total: users.length, users });
+    } catch (err) { next(err); }
+};
+
+export const updateUserStatus = async (req, res, next) => {
+    try {
+        const { phone, status } = req.body;
+        const user = await User.findOneAndUpdate({ phone }, { status }, { new: true })
+            .select('-otp -otpExpiry -refreshToken');
+        if (!user) return next(new AppError("User not found", 404));
+        res.status(200).json({ message: `User ${status}`, user });
+    } catch (err) { next(err); }
+};
+
 
 // logout
 export const logout = async (req, res) => {
