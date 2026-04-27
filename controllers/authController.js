@@ -195,9 +195,11 @@ export const login = async (req, res, next) => {
         // APPROVED → send OTP
         const otp = generateOTP();
         user.otp         = otp;
-        user.otpExpiry   = new Date(Date.now() + 5 * 60 * 1000); // 5 min
+        user.otpExpiry = new Date(Date.now() + 30 * 60 * 1000);  // 30 minutes
         user.otpAttempts = 0;
+        user.activityLog.push({ action: 'otp_request', ip: req.ip });
         await user.save();
+        
 
         // DEV MODE → return OTP directly for Postman testing
         if (process.env.NODE_ENV === 'development') {
@@ -229,6 +231,7 @@ export const verifyOtp = async (req, res, next) => {
         // Wrong OTP
         if (user.otp !== otp) {
             user.otpAttempts += 1;
+            user.activityLog.push({ action: 'otp_failed', ip: req.ip });
             await user.save();
             return next(new AppError(`Wrong OTP. ${3 - user.otpAttempts} attempts left.`, 400));
         }
@@ -238,6 +241,7 @@ export const verifyOtp = async (req, res, next) => {
         const accessToken  = generateAccessToken(user);
         const refreshToken = generateRefreshToken(user);
         user.refreshToken  = refreshToken;
+        user.activityLog.push({ action: 'login', ip: req.ip });
         await user.save();
 
         res.status(200).json({
@@ -270,21 +274,25 @@ export const updateUserStatus = async (req, res, next) => {
 
 
 // logout
-export const logout = async (req, res) => {
+export const logout = async (req, res, next) => {    // ← ADD next here
     try {
         const phone = req.user.phone;
 
         await User.findOneAndUpdate(
-            {phone},
-            { refreshToken: null},
+            { phone },
+            { 
+                refreshToken: null,
+                $push: { activityLog: { action: 'logout', ip: req.ip } }  // ← ADD
+            },
             { new: true }
         );
-        res.json({message:"Logged out successfully"});
+
+        res.json({ message: "Logged out successfully" });
+
     } catch (err) {
         next(err);
     }
-    };
-
+};
 // REFRESH TOKEN
 export const refresh = async (req, res) => {
     try {
@@ -371,4 +379,81 @@ export const uploadPicture = async (req, res, next) => {
     } catch (err) {
         next(err);
     }
+};
+export const getUserDetail = async (req, res, next) => {
+    try {
+        const {phone} = req.params;
+        const user = await User.findOne({phone})
+        .select('-password -refreshToken -otp -otpExpiry -otpAttempts');
+
+        if 
+             (!user) return next(new AppError("User not found", 404));
+        
+        res.status(200).json({user});
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const editUser = async (req, res, next) => {
+    try {
+        const {phone} = req.params;
+        const { name, email, address, gender, role, status} = req.body;
+
+        const updateFields = {};
+        if (name) updateFields.name = name;
+        if (email) updateFields.email = email;
+        if (address) updateFields.address = address;
+        if (gender) updateFields.gender = gender;
+        if (role) updateFields.role = role;
+        if (status) updateFields.status = status;
+
+        const user = await User. findOneAndUpdate(
+            {phone},
+            {$set: updateFields},
+            {new: true}
+        ).select('-password -refreshToken -otp -otpExpiry -otpAttempts');
+
+        if (!user) {
+            return next(new AppError("User not found", 404));
+        }
+
+        res.status(200).json({ message: "User updated successfully", user });
+    } catch (err) {
+        next(err);
+    }
+};
+
+export const deleteUser = async (req, res, next) => {
+    try {
+        const {phone} = req.params;
+
+        const user = await User.findOneAndDelete({phone});
+
+        if (!user) 
+            return next(new AppError("User not found", 404));
+        res.status(200).json({ message: "User deleted successfully" });
+    } catch (err){
+        next(err);
+    }
+};
+export const getDashboardData = async (req, res, next) => {
+    try {
+        const [total, pending, approved, rejected, users] = await Promise.all([
+            User.countDocuments(),
+            User.countDocuments({ status: 'pending' }),
+            User.countDocuments({ status: 'approved' }),
+            User.countDocuments({ status: 'rejected' }),
+            User.find()
+                .select('-password -refreshToken -otp -otpExpiry -otpAttempts')
+                .sort({ createdAt: -1 })
+                .limit(100)
+        ]);
+
+        res.status(200).json({
+            metrics: { total, pending, approved, rejected },
+            users
+        });
+
+    } catch (err) { next(err); }
 };

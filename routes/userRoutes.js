@@ -25,12 +25,19 @@ router.get('/profile', authMiddleware, authController.getProfile);
 // Add these alongside your existing routes:
 router.post('/login',         loginvalidation, validate, authController.login);
 router.post('/verify-otp',    authController.verifyOtp);
-router.get ('/admin/pending', authMiddleware, adminMiddleware, authController.getPendingUsers);
-router.post('/admin/status',  authMiddleware, adminMiddleware, authController.updateUserStatus);
+
 
 
 router.post('/upload-picture', authMiddleware, upload.single('profilePicture'), authController.uploadPicture);
 export default router;
+
+router.get('/admin/dashboard', authMiddleware, adminMiddleware, authController.getDashboardData);
+router.get ('/admin/pending', authMiddleware, adminMiddleware, authController.getPendingUsers);
+router.get   ('/admin/user/:phone', authMiddleware, adminMiddleware, authController.getUserDetail);
+router.put   ('/admin/user/:phone', authMiddleware, adminMiddleware, authController.editUser);
+router.delete('/admin/user/:phone', authMiddleware, adminMiddleware, authController.deleteUser);
+router.post('/admin/status',  authMiddleware, adminMiddleware, authController.updateUserStatus);
+
 
 
 
