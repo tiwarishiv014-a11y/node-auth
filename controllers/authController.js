@@ -41,18 +41,18 @@ export const register = async (req, res) => {
 // UPDATE USER
 export const update = async (req, res) => {
     try {
-        // 🔍 get phone from token (set by authMiddleware)
+        //  get phone from token (set by authMiddleware)
         const phone = req.user.phone;
 
-        // 📦 get fields from body
+        //  get fields from body
         const { name, email, address, gender, password } = req.body;
 
-        // 🔴 check if at least one field is provided
+        //  check if at least one field is provided
         if (!name && !email && !address && !gender && !password) {
             return res.status(400).json({ message: "No fields provided to update" });
         }
 
-        // 🔍 email duplicate check
+        //  email duplicate check
         if (email) {
             const existing = await User.findOne({ email });
             if (existing && existing.phone !== phone) {
@@ -60,31 +60,31 @@ export const update = async (req, res) => {
             }
         }
 
-        // ✅ build update object — only add fields that are provided
+        // build update object — only add fields that are provided
         const updateFields = {};
         if (name) updateFields.name = name;
         if (email) updateFields.email = email;
         if (address) updateFields.address = address;
         if (gender) updateFields.gender = gender;
 
-        // 🔐 hash password if provided
+        //  hash password if provided
         if (password) {
             updateFields.password = await bcrypt.hash(password, 10);
         }
 
-        // 💾 find user by phone and update
+        //  find user by phone and update
         const user = await User.findOneAndUpdate(
-            { phone },                  // 🔍 find by phone from token
-            { $set: updateFields },     // ✅ only update provided fields
-            { new: true }               // 📦 return updated document
-        ).select('-password -refreshToken'); // 🔒 hide sensitive fields
+            { phone },                  //  find by phone from token
+            { $set: updateFields },     //  only update provided fields
+            { new: true }               //  return updated document
+        ).select('-password -refreshToken'); //  hide sensitive fields
 
-        // 🔴 user not found
+        //  user not found
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // ✅ success
+        //  success
         res.json({ message: "User updated successfully", user });
 
     } catch (err) {
@@ -195,7 +195,7 @@ export const login = async (req, res, next) => {
         // APPROVED → send OTP
         const otp = generateOTP();
         user.otp         = otp;
-        user.otpExpiry = new Date(Date.now() + 30 * 60 * 1000);  // 30 minutes
+        user.otpExpiry = new Date(Date.now() + parseInt(process.env.OTP_EXPIRY) * 60 * 1000);  // 30 minutes
         user.otpAttempts = 0;
         user.activityLog.push({ action: 'otp_request', ip: req.ip });
         await user.save();
@@ -296,34 +296,34 @@ export const logout = async (req, res, next) => {    // ← ADD next here
 // REFRESH TOKEN
 export const refresh = async (req, res) => {
     try {
-        // 📦 get refresh token from body
+        //  get refresh token from body
         const { refreshToken } = req.body;
 
-        // 🔴 check if refresh token is provided
+        //  check if refresh token is provided
         if (!refreshToken) {
             return res.status(401).json({ message: "Refresh token is required" });
         }
 
-        // 🔍 verify refresh token signature
+        //  verify refresh token signature
         const decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET);
 
-        // 🔍 find user in DB by id from token
+        //  find user in DB by id from token
         const user = await User.findById(decoded.id);
 
-        // 🔴 user not found
+        //  user not found
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // 🔴 check if refresh token matches the one stored in DB
+        //  check if refresh token matches the one stored in DB
         if (user.refreshToken !== refreshToken) {
             return res.status(403).json({ message: "Invalid refresh token" });
         }
 
-        // ✅ generate new access token
+        //  generate new access token
         const newAccessToken = generateAccessToken(user);
 
-        // ✅ send new access token
+        // send new access token
         res.json({ accessToken: newAccessToken });
 
     } catch (err) {

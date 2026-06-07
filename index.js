@@ -25,7 +25,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB connection
-mongoose.connect('mongodb://127.0.0.1:27017/mydb')
+mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("MongoDB Connected"))
 .catch(err => console.log(err));
 
@@ -41,8 +41,8 @@ app.get('/', (req, res) => {
     res.send("Server running 🚀");
 });
 
-app.listen(3000, () => {
-    console.log("http://localhost:3000");
+app.listen(process.env.PORT, () => {
+    console.log(`http://localhost:${process.env.PORT}`);
 });
 
 // Error handling middleware

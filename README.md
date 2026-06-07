@@ -1,78 +1,74 @@
 # 🔐 Node.js Authentication API
 
-A production-ready backend authentication system built using Node.js, Express, MongoDB, and JWT.  
-This project follows **MVC architecture**, includes **phone-based OTP login**, **admin approval system**, **file upload**, and **centralized error handling**.
+A production-ready REST API with **phone-based OTP login**, **admin approval system**, and a built-in **admin dashboard**.
+
+> Built with Node.js · Express · MongoDB · JWT
 
 ---
 
-## 🚀 Features
+## What this project does
 
-- ✅ User Registration with bcrypt password hashing (admin)
-- ✅ Phone-based OTP Login (no password for users)
-- ✅ Admin approval flow for new users
-- ✅ JWT Access Token (15min) + Refresh Token (7d)
-- ✅ Secure Logout (invalidates refresh token)
-- ✅ Role-based access control (admin / user)
-- ✅ Update user profile
-- ✅ Get user profile (protected)
-- ✅ Upload profile picture (Multer)
-- ✅ Input validation (express-validator)
-- ✅ Rate limiting on auth routes
-- ✅ Pagination & filtering on user list
-- ✅ Admin dashboard (plain HTML)
-- ✅ MVC Architecture
-- ✅ Centralized Error Handling
+- New users login with their **phone number only** — no password
+- First-time users are held in **pending** status until an admin approves them
+- Approved users receive an **OTP** to verify and get their JWT token
+- Admins manage everything from a **live HTML dashboard**
 
 ---
 
-## 🛠️ Tech Stack
+## Tech Stack
 
-- **Node.js** — Runtime
-- **Express.js** — Framework
-- **MongoDB + Mongoose** — Database
-- **JWT** — Authentication
-- **bcrypt** — Password hashing
-- **express-validator** — Validation
-- **multer** — File upload
-- **express-rate-limit** — Rate limiting
-- **cors** — Cross-origin requests
+Node.js · Express.js · MongoDB · JWT · bcrypt · Multer · express-validator · cors · express-rate-limit
 
 ---
 
-## 📁 Project Structure
+## Key Features
+
+| Feature | Details |
+|---|---|
+| Phone OTP Login | No password — OTP sent on every login |
+| Admin Approval | New users stay pending until admin approves |
+| JWT Auth | Access token (15min) + Refresh token (7d) |
+| Role-based Access | Admin and user roles with protected routes |
+| Admin Dashboard | View, edit, delete, approve users from browser |
+| Activity Log | Tracks login, OTP requests, failures, logout per user |
+| File Upload | Profile picture upload via Multer |
+| Rate Limiting | 10 requests / 15 min on auth routes |
+
+---
+
+## Project Structure
 
 ```
 node-auth/
 ├── controllers/
-│   └── authController.js     # Business logic
+│   └── authController.js
 ├── middleware/
-│   ├── authMiddleware.js      # JWT + admin check
-│   ├── errorHandler.js        # Centralized error handling
-│   ├── rateLimiter.js         # Rate limiting
-│   └── upload.js              # Multer file upload
+│   ├── authMiddleware.js
+│   ├── errorHandler.js
+│   ├── rateLimiter.js
+│   └── upload.js
 ├── models/
-│   └── User.js                # User schema
+│   └── User.js
 ├── public/
-│   └── admin-dashboard.html   # Admin dashboard UI
+│   └── admin-dashboard.html
 ├── routes/
-│   └── userRoutes.js          # All API routes
-├── uploads/                   # Uploaded profile pictures
+│   └── userRoutes.js
+├── uploads/
 ├── utils/
-│   ├── AppError.js            # Custom error class
-│   ├── otp.js                 # OTP generator
-│   ├── sendOTP.js             # OTP sender (SMS / dev mode)
-│   └── token.js               # JWT token generators
+│   ├── AppError.js
+│   ├── otp.js
+│   ├── sendOTP.js
+│   └── token.js
 ├── validator/
-│   └── userValidator.js       # Input validation rules
-├── .env                       # Environment variables
-├── .gitignore
-├── index.js                   # Entry point
+│   └── userValidator.js
+├── .env
+├── index.js
 └── package.json
 ```
 
 ---
 
-## ⚙️ Installation
+## Getting Started
 
 ```bash
 git clone https://github.com/tiwarishiv014-a11y/node-auth.git
@@ -81,17 +77,16 @@ npm install
 mkdir uploads
 ```
 
-Create `.env` file:
+Create `.env`:
 
 ```env
 MONGO_URI=mongodb://127.0.0.1:27017/mydb
-ACCESS_SECRET=your_access_secret_here
-REFRESH_SECRET=your_refresh_secret_here
+ACCESS_SECRET=your_secret_here
+REFRESH_SECRET=your_secret_here
 NODE_ENV=development
 PORT=3000
+OTP_EXPIRY_MINUTES=10
 ```
-
-Start server:
 
 ```bash
 npm run dev
@@ -99,91 +94,169 @@ npm run dev
 
 ---
 
-## 🔐 API Endpoints
+## API Endpoints
 
-### Auth (Public)
+### Public
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/register` | Register an admin user |
+| POST | `/api/login` | Login with phone |
+| POST | `/api/verify-otp` | Verify OTP and receive tokens |
+| POST | `/api/resend-otp` | Resend OTP |
+| POST | `/api/refresh` | Refresh access token |
 
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| POST | `/api/register` | Register admin user | ❌ |
-| POST | `/api/login` | Phone login — new user → pending, approved user → OTP | ❌ |
-| POST | `/api/verify-otp` | Verify OTP → returns access + refresh tokens | ❌ |
-| POST | `/api/resend-otp` | Resend OTP to phone | ❌ |
-| POST | `/api/refresh` | Get new access token using refresh token | ❌ |
+### User (token required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/profile` | Get profile |
+| POST | `/api/update` | Update profile |
+| POST | `/api/upload-picture` | Upload profile picture |
+| POST | `/api/logout` | Logout |
 
-### User (Protected)
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/profile` | Get logged in user profile | ✅ |
-| POST | `/api/update` | Update name, email, address, gender | ✅ |
-| POST | `/api/upload-picture` | Upload profile picture (form-data) | ✅ |
-| POST | `/api/logout` | Logout and clear refresh token | ✅ |
-
-### Admin (Admin token required)
-
-| Method | Endpoint | Description | Auth |
-|--------|----------|-------------|------|
-| GET | `/api/users` | Get all users with pagination + filters | 👮 |
-| GET | `/api/admin/pending` | Get all pending approval requests | 👮 |
-| POST | `/api/admin/status` | Approve or reject a user | 👮 |
-
-> ✅ Bearer token required &nbsp;&nbsp; 👮 Admin role required
-
----
-
-## 📱 Login Flow
-
-```
-User hits /api/login with phone number
-            │
-            ▼
-      Found in DB?
-      ┌──────┴──────┐
-     NO            YES
-      │              │
-      ▼           status?
-  Create user   ┌────┼────┐
-  as pending  pend  rej  approved
-      │          │    │      │
-  "sent to     403  403   Send OTP
-   admin"                    │
-                              ▼
-                      /api/verify-otp
-                              │
-                              ▼
-                       accessToken
-                       refreshToken
-```
+### Admin (admin token required)
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/admin/dashboard` | Metrics and all users in one call |
+| GET | `/api/admin/pending` | All pending users |
+| POST | `/api/admin/status` | Approve or reject a user |
+| GET | `/api/admin/user/:phone` | Single user detail and activity log |
+| PUT | `/api/admin/user/:phone` | Edit user |
+| DELETE | `/api/admin/user/:phone` | Delete user |
+| GET | `/api/users` | All users with pagination and filters |
 
 ---
 
-## 🧪 How to Test in Postman
+## How Login Works
 
-### Step 1 — Setup Environment
+```
+User sends phone number
+        |
+        v
+   Found in DB?
+   |           |
+  NO          YES
+   |            |
+   v         status?
+Create     pend  rej  approved
+pending     |     |      |
+            403  403   Send OTP
+                       Return OTP (dev)
+```
 
-Create a new environment called `node-auth-dev` with these variables:
+- Phone not found — user created with status pending, must wait for admin
+- Found but pending — blocked with 403
+- Found but rejected — blocked with 403
+- Found and approved — OTP generated, saved to DB, returned in response (dev mode)
+
+---
+
+## How Verify OTP Works
+
+```
+User sends phone + OTP
+        |
+        v
+  Attempts >= 3?  →  block 429
+        |
+        v
+  OTP expired?    →  clear OTP, block 400
+        |
+        v
+  OTP wrong?      →  attempts++, block 400
+        |
+        v
+      SUCCESS
+  Clear OTP and attempts
+  Generate accessToken and refreshToken
+  Save refreshToken to DB
+  Log activity, return tokens
+```
+
+- Max 3 wrong attempts — locked out, must login again for new OTP
+- OTP expires in 10 minutes
+- On success — OTP cleared from DB, tokens returned, activity logged
+
+---
+
+## How Admin Approval Works
+
+```
+Admin sends phone + status
+        |
+        v
+  Valid token?   NO  →  401
+        |
+        v
+  Role = admin?  NO  →  403
+        |
+        v
+  Find user by phone
+  Update status in DB
+        |
+   approved      rejected
+      |               |
+  User gets       User is
+  OTP on          blocked
+  next login
+```
+
+- Admin must have a valid JWT with role: admin
+- Updates status field to approved or rejected
+- After approval — user next login gets OTP instead of pending message
+
+---
+
+## Complete Flow
+
+```
+1. User   POST /api/login          phone only — status pending
+2. Admin  POST /api/login          gets OTP
+3. Admin  POST /api/verify-otp     gets admin token
+4. Admin  POST /api/admin/status   approves user
+5. User   POST /api/login          gets OTP now
+6. User   POST /api/verify-otp     gets user token
+7. User   GET  /api/profile        uses token
+```
+
+---
+
+## Token Lifecycle
+
+```
+verify-otp returns:
+  accessToken   expires 15 min   use for all protected requests
+  refreshToken  expires 7 days   use to get new accessToken
+
+When accessToken expires:
+  POST /api/refresh { "refreshToken": "eyJ..." }
+  returns new accessToken
+
+When logout:
+  POST /api/logout
+  refreshToken deleted from DB
+  user must login again from scratch
+```
+
+---
+
+## Postman Setup
+
+Create environment `node-auth-dev`:
 
 | Variable | Value |
 |----------|-------|
 | `base_url` | `http://localhost:3000/api` |
-| `admin_token` | *(auto filled after login)* |
-| `user_token` | *(auto filled after login)* |
-| `otp` | *(auto filled after login)* |
+| `admin_token` | auto filled after admin login |
+| `user_token` | auto filled after user login |
+| `otp` | auto filled after login |
 
----
-
-### Step 2 — Auto Scripts (set once, works forever)
-
-**In `POST /api/login` → Scripts tab → Post-response:**
+**POST /api/login — Scripts — Post-response:**
 ```js
 const data = pm.response.json();
-if (data.otp) {
-    pm.environment.set('otp', data.otp);
-}
+if (data.otp) pm.environment.set('otp', data.otp);
 ```
 
-**In `POST /api/verify-otp` → Scripts tab → Post-response:**
+**POST /api/verify-otp — Scripts — Post-response:**
 ```js
 const data = pm.response.json();
 if (data.accessToken) {
@@ -195,196 +268,48 @@ if (data.accessToken) {
 }
 ```
 
----
-
-### Step 3 — Create First Admin
-
-Open MongoDB Compass → `mydb` → `users` → Insert Document:
-
-```json
-{
-    "name": "Admin",
-    "email": "admin@gmail.com",
-    "phone": "9999999999",
-    "role": "admin",
-    "status": "approved",
-    "isActive": true,
-    "otp": null,
-    "otpExpiry": null,
-    "otpAttempts": 0,
-    "refreshToken": null
-}
+**Test order:**
+```
+1. POST  {{base_url}}/login          { "phone": "9999999999" }
+2. POST  {{base_url}}/verify-otp     { "phone": "9999999999", "otp": "{{otp}}" }
+3. POST  {{base_url}}/admin/status   { "phone": "8888888888", "status": "approved" }
+4. POST  {{base_url}}/login          { "phone": "8888888888" }
+5. POST  {{base_url}}/verify-otp     { "phone": "8888888888", "otp": "{{otp}}" }
+6. GET   {{base_url}}/profile        Bearer {{user_token}}
 ```
 
 ---
 
-### Step 4 — Test All Endpoints
-
-#### 🔐 Register (admin only)
-```
-POST {{base_url}}/register
-Body:
-{
-    "name": "Shivansh Tiwari",
-    "email": "shivansh@gmail.com",
-    "password": "admin123",
-    "phone": "9999999999",
-    "address": "Jabalpur",
-    "gender": "male",
-    "role": "admin"
-}
-```
-
----
-
-#### 📱 Login
-```
-POST {{base_url}}/login
-Body:
-{
-    "phone": "9999999999"
-}
-
-Response (dev mode):
-{
-    "status": "otp_sent",
-    "otp": "482910"    ← auto saved to {{otp}}
-}
-```
-
----
-
-#### ✅ Verify OTP
-```
-POST {{base_url}}/verify-otp
-Body:
-{
-    "phone": "9999999999",
-    "otp": "{{otp}}"
-}
-
-Response:
-{
-    "message": "Login successful",
-    "accessToken": "eyJ...",    ← auto saved to {{admin_token}}
-    "refreshToken": "eyJ..."
-}
-```
-
----
-
-#### 👤 Get Profile
-```
-GET {{base_url}}/profile
-Authorization: Bearer {{admin_token}}
-```
-
----
-
-#### ✏️ Update Profile
-```
-POST {{base_url}}/update
-Authorization: Bearer {{user_token}}
-Body:
-{
-    "name": "Shivansh",
-    "address": "Rewa",
-    "gender": "male"
-}
-```
-
----
-
-#### 🖼️ Upload Profile Picture
-```
-POST {{base_url}}/upload-picture
-Authorization: Bearer {{user_token}}
-Body: form-data
-  Key  : profilePicture  (type: File)
-  Value: select any image from your computer
-```
-
----
-
-#### 🔄 Refresh Token
-```
-POST {{base_url}}/refresh
-Body:
-{
-    "refreshToken": "eyJ..."
-}
-```
-
----
-
-#### 🚪 Logout
-```
-POST {{base_url}}/logout
-Authorization: Bearer {{user_token}}
-```
-
----
-
-#### 👮 Get All Users (admin)
-```
-GET {{base_url}}/users
-Authorization: Bearer {{admin_token}}
-
-With filters:
-GET {{base_url}}/users?page=1&limit=10
-GET {{base_url}}/users?status=pending
-GET {{base_url}}/users?role=user
-```
-
----
-
-#### 👮 Get Pending Users (admin)
-```
-GET {{base_url}}/admin/pending
-Authorization: Bearer {{admin_token}}
-```
-
----
-
-#### 👮 Approve or Reject User (admin)
-```
-POST {{base_url}}/admin/status
-Authorization: Bearer {{admin_token}}
-Body:
-{
-    "phone": "8888888888",
-    "status": "approved"
-}
-```
-
----
-
-## 🖥️ Admin Dashboard
-
-After starting server open in browser:
+## Admin Dashboard
 
 ```
 http://localhost:3000/admin-dashboard.html
 ```
 
-- Login with admin phone + OTP
-- See all users with live status
-- Approve / Reject pending users
-- Search and filter users
-- Metrics update in real time
+- Login with admin phone and OTP
+- View all users with live metrics
+- View full user profile and activity log in popup
+- Edit user details directly
+- Delete user with confirmation
+- Approve or reject pending users
+- Search by phone or name, filter by role
 
 ---
 
-## 📝 Notes
+## Notes
 
-- In `NODE_ENV=development` → OTP is returned in API response for Postman testing
-- In `NODE_ENV=production` → OTP is sent via SMS (Fast2SMS)
-- Access token expires in **15 minutes**
-- Refresh token expires in **7 days**
-- Rate limit: **10 requests / 15 min** on auth routes
+- NODE_ENV=development — OTP returned in API response for Postman testing
+- NODE_ENV=production — OTP sent via SMS using Fast2SMS
+- Access token expires in 15 minutes
+- Refresh token expires in 7 days
+- OTP expires in 10 minutes
+- Rate limit 10 requests per 15 min on auth routes
+- If duplicate key error on email — run db.users.dropIndexes() in mongosh then restart
 
 ---
 
-## 🔗 Repository
+## Links
 
-[github.com/tiwarishiv014-a11y/node-auth](https://github.com/tiwarishiv014-a11y/node-auth)
+GitHub: https://github.com/tiwarishiv014-a11y/node-auth
+
+LinkedIn: https://linkedin.com/in/shivansh-tiwari-72ab57315
