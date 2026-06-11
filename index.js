@@ -1,9 +1,14 @@
 import dotenv from 'dotenv';
-dotenv.config();
+
+
+dotenv.config({ override: true }); 
+console.log('ALL ENV KEYS:', Object.keys(process.env).filter(k => k.includes('SARVAM')));
 
 import express from 'express';
 import mongoose from 'mongoose';
 import userRoutes from './routes/userRoutes.js';
+import chatRoutes from './routes/chatRoutes.js';
+import voiceRoutes from './routes/voiceRoutes.js';
 import errorHandler from './middleware/errorHandler.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -35,7 +40,8 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Routes
 app.use('/api', userRoutes);
-
+app.use('/api/chat', chatRoutes);
+app.use('/api/voice', voiceRoutes);
 // Basic route
 app.get('/', (req, res) => {
     res.send("Server running 🚀");
