@@ -6,6 +6,14 @@ A production-ready REST API combining **phone-based OTP authentication**, **admi
 
 ---
 
+## 🔗 Connected Projects
+
+| Project | Repository | Description |
+|---------|-----------|-------------|
+| Frontend (React) | [node-auth-frontend](https://github.com/tiwarishiv014-a11y/node-auth-frontend) | React UI · Auth · AI Chat · Voice |
+
+---
+
 ## What this project does
 
 * New users login with their **phone number only** — no password
@@ -106,6 +114,10 @@ OTP_EXPIRY_MINUTES=10
 npm run dev
 ```
 
+Server runs on `http://localhost:3000`
+
+> ⚠️ Frontend runs separately on `http://localhost:5173` — see [node-auth-frontend](https://github.com/tiwarishiv014-a11y/node-auth-frontend)
+
 ---
 
 ## API Endpoints
@@ -143,11 +155,13 @@ npm run dev
 
 ### AI Chat
 
-| Method | Endpoint            | Description         |
-| ------ | ------------------- | ------------------- |
-| POST   | `/api/chat`         | Send message to AI  |
-| GET    | `/api/chat/history` | Get chat history    |
-| DELETE | `/api/chat/history` | Delete chat history |
+| Method | Endpoint                  | Description              |
+| ------ | ------------------------- | ------------------------ |
+| POST   | `/api/chat`               | Send message to AI       |
+| GET    | `/api/chat/sessions`      | Get all chat sessions    |
+| GET    | `/api/chat/:chatId`       | Get single chat session  |
+| DELETE | `/api/chat/:chatId`       | Delete chat session      |
+| DELETE | `/api/chat/clear/all`     | Clear all chats          |
 
 ### Voice
 
@@ -274,8 +288,6 @@ Return response to frontend
 POST /api/voice/transcribe
 ```
 
-Flow:
-
 ```text
 User records audio
         |
@@ -283,13 +295,10 @@ User records audio
 Backend receives file
         |
         v
-Sarvam STT API
+Sarvam STT API (saaras:v3)
         |
         v
-Transcribed text
-        |
-        v
-Return text response
+Transcribed text returned
 ```
 
 ### Text-to-Speech
@@ -298,8 +307,6 @@ Return text response
 POST /api/voice/speak
 ```
 
-Flow:
-
 ```text
 User sends text
         |
@@ -307,13 +314,10 @@ User sends text
 Backend receives text
         |
         v
-Sarvam TTS API
+Sarvam TTS API (bulbul:v2)
         |
         v
-Generate audio
-        |
-        v
-Return audio response
+Base64 audio returned
 ```
 
 ---
@@ -343,24 +347,17 @@ accessToken   expires 15 min
 refreshToken  expires 7 days
 
 When accessToken expires:
-
-POST /api/refresh
-
-returns new accessToken
+POST /api/refresh → returns new accessToken
 
 When logout:
-
-POST /api/logout
-
-refreshToken deleted from DB
-user must login again
+POST /api/logout → refreshToken deleted from DB
 ```
 
 ---
 
 ## Admin Dashboard
 
-```text
+```
 http://localhost:3000/admin-dashboard.html
 ```
 
@@ -418,8 +415,6 @@ Features:
 
 Shivansh Tiwari
 
-GitHub:
-https://github.com/tiwarishiv014-a11y/node-auth
-
-LinkedIn:
-https://linkedin.com/in/shivansh-tiwari-72ab57315
+- GitHub: [tiwarishiv014-a11y](https://github.com/tiwarishiv014-a11y)
+- Frontend Repo: [node-auth-frontend](https://github.com/tiwarishiv014-a11y/node-auth-frontend)
+- LinkedIn: [shivansh-tiwari-72ab57315](https://linkedin.com/in/shivansh-tiwari-72ab57315)
