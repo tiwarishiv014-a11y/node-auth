@@ -22,7 +22,14 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Enable CORS for all routes
-app.use(cors());
+// app.use(cors());// for development purposes, you might want to restrict this in production
+app.use(cors({
+    origin: [
+        'http://localhost:5173',
+        'https://node-auth-frontend-zeta.vercel.app'
+    ],
+    credentials: true
+}));
 app.use(express.static(path.join(__dirname, 'public'))); 
 
 // Middleware
