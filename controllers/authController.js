@@ -12,6 +12,11 @@ export const register = async (req, res) => {
         if (!name || !email || !password || !phone || !address || !gender || !role) {
             return res.json({ message: "All fields are required" });
         }
+        if (password && password.length > 72) {
+    return res.status(400).json({ 
+        error: 'Password too long (max 72 characters)' 
+    });
+}
 
         // Check if user already exists
         

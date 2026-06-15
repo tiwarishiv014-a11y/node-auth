@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 
 
+
 dotenv.config({ override: true }); 
 console.log('ALL ENV KEYS:', Object.keys(process.env).filter(k => k.includes('SARVAM')));
 
@@ -13,6 +14,7 @@ import errorHandler from './middleware/errorHandler.js';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import cors from 'cors';
+import mongoSanitize from 'express-mongo-sanitize';
 
 
 
@@ -35,7 +37,7 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use(mongoSanitize());
 // MongoDB connection
 mongoose.connect(process.env.MONGO_URI)
 .then(() => console.log("MongoDB Connected"))
