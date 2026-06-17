@@ -21,6 +21,7 @@
     "express-mongo-sanitize": "^2.2.0",
     "express-validator": "^7.3.2",
     "form-data": "^4.0.5",
+    "groq-sdk": "^1.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.4.1",
     "multer": "^2.1.1"
