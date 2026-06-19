@@ -123,15 +123,16 @@ export const chatWithPdf = async (req, res) => {
 const chunksToUse = relevantChunks.length > 0 ? relevantChunks : allChunks;
 
 //  👇 ADD THESE DEBUG LINES
-console.log('Total chunks:', doc.chunks.length);
-console.log('Question:', question);
-console.log('Relevant chunks found:', relevantChunks.length);
-console.log('First chunk text:', doc.chunks[0]?.text?.substring(0, 200));
+// console.log('Total chunks:', doc.chunks.length);
+// console.log('Question:', question);
+// console.log('Relevant chunks found:', relevantChunks.length);
+// console.log('First chunk text:', doc.chunks[0]?.text?.substring(0, 200));
 
         const context = chunksToUse.map(c => c.text).join('\n\n');
 
-        console.log('First relevantChunk:', JSON.stringify(relevantChunks[0]));
-console.log('First doc.chunk:', JSON.stringify(doc.chunks[0]));         // debug
+         
+        //         console.log('First relevantChunk:', JSON.stringify(relevantChunks[0]));
+        // console.log('First doc.chunk:', JSON.stringify(doc.chunks[0]));         // debug
 
         const response = await groq.chat.completions.create({
             model: 'llama-3.1-8b-instant',  // Fast, free Groq model
