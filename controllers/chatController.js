@@ -1,12 +1,37 @@
 // controllers/chatController.js
+// import dotenv from 'dotenv';
+// dotenv.config({ override: true });
+
+// // ✅ Debug - Check if env is loaded
+// console.log('🔍 chatController: GROQ_API_KEY =', process.env.GROQ_API_KEY ? '✅ Present' : '❌ Missing');
+
 import axios from 'axios';
 import Chat from '../models/Chat.js';
-import Groq from 'groq-sdk';  
+import Groq from 'groq-sdk'; 
+
 
 const SARVAM_API_URL = 'https://api.sarvam.ai/v1/chat/completions';
 
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// const groq = new Groq({ 
+//     apiKey: process.env.GROQ_API_KEY  // ← Make sure this is set
+// });
+// let groq;
+// try {
+//     groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+// } catch (error) {
+//     console.warn('⚠️ Groq init failed:', error.message);
+//     groq = null;
+// }
 
+let groq;
+try {
+    groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+    console.log('✅ Groq initialized');
+} catch (error) {
+    console.warn('⚠️ Groq init failed:', error.message);
+    console.log('🔍 GROQ_API_KEY:', process.env.GROQ_API_KEY ? '✅ Present' : '❌ Missing');
+    groq = null;
+}
 const systemPrompt = (language) => ({
     role: 'system',
     content: `You are a helpful assistant for an Indian user authentication platform.
@@ -39,19 +64,25 @@ const callSarvam = async (messages) => {
  
 // ── Groq AI call ──────────────────────────────────────────────
 const callGroq = async (messages) => {
-    const response = await groq.chat.completions.create({
-        model:       'llama3-8b-8192', // fast & free
-        messages,
-        max_tokens:  500,
-        temperature: 0.7,
-    });
-    return response.choices[0]?.message?.content || 'Hello! How can I help you?';
+    if (!groq) throw new Error('Groq AI is not available.');
+    try {
+        const response = await groq.chat.completions.create({
+            model: 'llama-3.1-8b-instant',
+            messages,
+            max_tokens:  500,
+            temperature: 0.7,
+        });
+        return response.choices[0]?.message?.content || 'Hello! How can I help you?';
+    } catch (error) {
+        console.error('🔴 Groq Error:', error.message, error?.status, error?.error);
+        throw error;
+    }
 };
 // POST /api/chat
 // Body: { message, language, chatId? }
 export const sendMessage = async (req, res) => {
     try {
-        const { message, language = 'en-IN', chatId } = req.body;
+        const { message, language = 'en-IN', chatId , aiModel = 'sarvam'} = req.body;
         const userId = req.user.id;
  
         if (!message || message.trim() === '') {
@@ -64,7 +95,7 @@ export const sendMessage = async (req, res) => {
             chatDoc = await Chat.findOne({ _id: chatId, userId });
             if (!chatDoc) return res.status(404).json({ success: false, error: 'Chat not found.' });
         } else {
-            chatDoc = new Chat({ userId, title: 'New Chat', messages: [] });
+            chatDoc = new Chat({ userId, title: 'New Chat', messages: [], aiModel});
         }
  
         const newUserMsg = { role: 'user', content: message };
@@ -137,7 +168,7 @@ export const getSessions = async (req, res) => {
             title:     s.title,
             preview:   s.messages.filter(m => m.role === 'user').slice(-1)[0]?.content || '',
             msgCount:  s.messages.length,
-            aiModel:   s.aiModel || 'Sarvam (sarvam-30b)',
+            aiModel:   s.aiModel || 'Sarvam ',
             updatedAt: s.updatedAt,
             createdAt: s.createdAt,
         }));
