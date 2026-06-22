@@ -216,3 +216,51 @@ export const clearAll = async (req, res) => {
         return res.status(500).json({ success: false, error: error.message });
     }
 };
+
+// ── GET /api/admin/logs/ai ────────────────────────────────
+export const getAiChatLogs = async (req, res) => {
+    try {
+        const chats = await Chat.find()
+            .populate('userId', 'name phone email')
+            .sort({ updatedAt: -1 })
+            .limit(50);
+
+        const logs = [];
+
+        chats.forEach(chat => {
+            chat.messages.forEach((msg, idx) => {
+                if (msg.role === 'user') {
+                    const next = chat.messages[idx + 1];
+                    logs.push({
+                        user:      chat.userId,
+                        message:   msg.content,
+                        response:  next?.content || '—',
+                        model:     chat.aiModel || 'sarvam',
+                        createdAt: msg.createdAt || chat.updatedAt,
+                    });
+                }
+            });
+        });
+
+        logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        return res.json({ success: true, logs });
+
+    } catch (error) {
+        console.error('AI logs error:', error.message);
+        return res.status(500).json({ success: false, error: 'Failed to fetch AI chat logs' });
+    }
+};
+
+// ── GET /api/admin/user-chats/:userId ────────────────────
+export const getUserChats = async (req, res) => {
+    try {
+        const chats = await Chat.find({ userId: req.params.userId })
+            .sort({ updatedAt: -1 })
+            .limit(20);
+
+        return res.json({ success: true, chats });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Failed to fetch user chats' });
+    }
+};

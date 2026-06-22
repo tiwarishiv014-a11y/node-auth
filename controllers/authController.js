@@ -4,7 +4,8 @@ import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import AppError from '../utils/AppError.js';
 import { generateOTP } from '../utils/otp.js';
-
+import Chat from '../models/Chat.js';
+import PdfDocument from '../models/PdfDocument.js';
 // REGISTER
 export const register = async (req, res) => {
     try {
@@ -461,4 +462,105 @@ export const getDashboardData = async (req, res, next) => {
         });
 
     } catch (err) { next(err); }
+};
+
+// ── Ban / Unban User ─────────────────────────────────────
+export const banUser = async (req, res) => {
+    try {
+        const { phone, reason } = req.body;
+        const user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+        user.isBanned  = true;
+        user.bannedAt  = new Date();
+        user.banReason = reason || 'Banned by admin';
+        await user.save();
+
+        return res.json({ success: true, message: `User ${phone} banned` });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Failed to ban user' });
+    }
+};
+
+export const unbanUser = async (req, res) => {
+    try {
+        const { phone } = req.body;
+        const user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+        user.isBanned  = false;
+        user.bannedAt  = null;
+        user.banReason = null;
+        await user.save();
+
+        return res.json({ success: true, message: `User ${phone} unbanned` });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Failed to unban user' });
+    }
+};
+
+// ── Reset OTP ────────────────────────────────────────────
+export const resetUserOtp = async (req, res) => {
+    try {
+        const { phone } = req.body;
+        const user = await User.findOne({ phone });
+        if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+
+        // Clear OTP and attempts so user can request fresh OTP
+        user.otp         = null;
+        user.otpExpiry   = null;
+        user.otpAttempts = 0;
+        await user.save();
+
+        return res.json({ success: true, message: `OTP reset for ${phone}` });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Failed to reset OTP' });
+    }
+};
+
+export const getAdminInsights = async (req, res) => {
+    try {
+        const users = await User.find().select('_id name phone createdAt updatedAt');
+
+        // Get chat counts per user
+        const chatCounts = await Chat.aggregate([
+            { $group: { _id: '$userId', count: { $sum: 1 }, lastChat: { $max: '$updatedAt' } } }
+        ]);
+
+        // Get pdf counts per user
+        const pdfCounts = await PdfDocument.aggregate([
+            { $group: { _id: '$userId', count: { $sum: 1 } } }
+        ]);
+
+        // Map to userId
+        const chatMap = {};
+        chatCounts.forEach(c => {
+            chatMap[c._id.toString()] = { count: c.count, lastChat: c.lastChat };
+        });
+
+        const pdfMap = {};
+        pdfCounts.forEach(p => {
+            pdfMap[p._id.toString()] = p.count;
+        });
+
+        // Build insights per user
+        const insights = users.map(u => ({
+            id:        u._id,
+            name:      u.name || '—',
+            phone:     u.phone,
+            chatCount: chatMap[u._id.toString()]?.count || 0,
+            pdfCount:  pdfMap[u._id.toString()] || 0,
+            lastActive: chatMap[u._id.toString()]?.lastChat || u.updatedAt,
+            joinedAt:  u.createdAt,
+        }));
+
+        // Sort by most active (chat count)
+        insights.sort((a, b) => b.chatCount - a.chatCount);
+
+        return res.json({ success: true, insights });
+
+    } catch (error) {
+        console.error('Insights error:', error.message);
+        return res.status(500).json({ success: false, error: 'Failed to fetch insights' });
+    }
 };

@@ -154,6 +154,10 @@ const chunksToUse = relevantChunks.length > 0 ? relevantChunks : allChunks;
         });
 
         const answer = response.choices?.[0]?.message?.content || 'No answer found';
+        // ✅ Save to chatHistory
+         await PdfDocument.findByIdAndUpdate(doc._id, {
+           $push: { chatHistory: { question, answer } }
+            });
 
         return res.json({
             success: true,
@@ -204,5 +208,49 @@ export const deletePdf = async (req, res) => {
     } catch (error) {
         console.error('PDF delete error:', error.message);
         return res.status(500).json({ success: false, error: 'Failed to delete PDF document' });
+    }
+};
+// ── GET /api/admin/logs/pdf ───────────────────────────────
+export const getPdfChatLogs = async (req, res) => {
+    try {
+        const pdfs = await PdfDocument.find()
+            .populate('userId', 'name phone email')
+            .sort({ createdAt: -1 })
+            .limit(50);
+
+        const logs = [];
+
+        pdfs.forEach(pdf => {
+            pdf.chatHistory.forEach(h => {
+                logs.push({
+                    user:      pdf.userId,
+                    filename:  pdf.filename,
+                    question:  h.question,
+                    answer:    h.answer,
+                    createdAt: h.timestamp || h.createdAt,
+                });
+            });
+        });
+
+        logs.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        return res.json({ success: true, logs });
+
+    } catch (error) {
+        console.error('PDF logs error:', error.message);
+        return res.status(500).json({ success: false, error: 'Failed to fetch PDF chat logs' });
+    }
+};
+
+// ── GET /api/admin/user-pdfs/:userId ─────────────────────
+export const getUserPdfs = async (req, res) => {
+    try {
+        const pdfs = await PdfDocument.find({ userId: req.params.userId })
+            .select('filename createdAt chatHistory chunks')
+            .sort({ createdAt: -1 });
+
+        return res.json({ success: true, pdfs });
+    } catch (error) {
+        return res.status(500).json({ success: false, error: 'Failed to fetch user PDFs' });
     }
 };
