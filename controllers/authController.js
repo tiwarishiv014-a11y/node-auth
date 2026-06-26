@@ -209,9 +209,10 @@ export const login = async (req, res, next) => {
 
         // DEV MODE → return OTP directly for Postman testing
         if (process.env.NODE_ENV === 'development') {
+            console.log(`[DEV] OTP for ${phone}: ${otp}`);   // console only, not in response        
             return res.status(200).json({ message: "OTP sent (dev mode)", status: "otp_sent", otp });
         }
-
+        await sendOTP(phone, otp);                                  // real SMS in production
         res.status(200).json({ message: "OTP sent to your phone.", status: "otp_sent" });
 
     } catch (err) { next(err); }
