@@ -6,7 +6,8 @@ import AppError from '../utils/AppError.js';
 import { generateOTP } from '../utils/otp.js';
 import Chat from '../models/Chat.js';
 import PdfDocument from '../models/PdfDocument.js';
-import { sendOTP } from '../utils/sendOtp.js';  // ✅ NEW
+
+import { sendOTP } from "../utils/sendOtp.js";
 // REGISTER
 export const register = async (req, res) => {
     try {

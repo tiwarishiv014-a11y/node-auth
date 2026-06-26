@@ -48,4 +48,4 @@ router.get('/admin/user-chats/:userId', authMiddleware, adminMiddleware, getUser
 router.get('/admin/user-pdfs/:userId',  authMiddleware, adminMiddleware, getUserPdfs);
 router.get('/admin/insights', authMiddleware, adminMiddleware, authController.getAdminInsights);
 
-export default router;  // ✅ moved to very bottom
+export default router;  
