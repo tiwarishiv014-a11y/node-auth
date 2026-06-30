@@ -7,7 +7,7 @@ import { generateOTP } from '../utils/otp.js';
 import Chat from '../models/Chat.js';
 import PdfDocument from '../models/PdfDocument.js';
 
-import { sendOTP } from "../utils/sendOtp.js";
+// import { sendOTP } from "../utils/sendOtp.js";
 // REGISTER
 export const register = async (req, res) => {
     try {
@@ -214,7 +214,7 @@ export const login = async (req, res, next) => {
             console.log(`[DEV] OTP for ${phone}: ${otp}`);   // console only, not in response        
             return res.status(200).json({ message: "OTP sent (dev mode)", status: "otp_sent", otp });
         }
-        await sendOTP(phone, otp);                                  // real SMS in production
+        // await sendOTP(phone, otp);                                  // real SMS in production
         res.status(200).json({ message: "OTP sent to your phone.", status: "otp_sent" });
 
     } catch (err) { next(err); }
