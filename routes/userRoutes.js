@@ -4,7 +4,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { authMiddleware } from '../middleware/authMiddleware.js';
-import { registervalidation, loginvalidation, updatevalidation, validate } from '../validator/userValidator.js';
+import { registervalidation, loginvalidation, loginPasswordValidation, updatevalidation, forgotPasswordValidation, resetPasswordValidation,  validate } from '../validator/userValidator.js';
 import * as authController from '../controllers/authController.js';
 
 import upload from '../middleware/upload.js';
@@ -16,11 +16,19 @@ import { getPdfChatLogs, getUserPdfs } from '../controllers/pdfController.js';
 const router = express.Router();
 
 // ── Auth Routes ───────────────────────────────────────────
-router.post('/register',    registervalidation, validate, authController.register);
-router.post('/login',       loginvalidation, validate, authController.login);
-router.post('/verify-otp',  authController.verifyOtp);
-router.post('/refresh',     authController.refresh);
-router.post('/logout',      authMiddleware, authController.logout);
+router.post('/register',       registervalidation, validate, authController.register);
+
+// Login option 1: OTP via phone
+router.post('/login',          loginvalidation, validate, authController.login);
+router.post('/verify-otp',     authController.verifyOtp);
+
+// Login option 2: Email + password
+router.post('/login/password', loginPasswordValidation, validate, authController.loginWithPassword);
+
+router.post('/refresh',        authController.refresh);
+router.post('/logout',         authMiddleware, authController.logout);
+router.post('/forgot-password', forgotPasswordValidation, validate, authController.forgotPassword);
+router.post('/reset-password',  resetPasswordValidation,  validate, authController.resetPassword);
 
 // ── User Routes ───────────────────────────────────────────
 router.get('/profile',        authMiddleware, authController.getProfile);

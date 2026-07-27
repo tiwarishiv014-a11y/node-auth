@@ -1,5 +1,7 @@
 import User from '../models/User.js';
-import bcrypt from 'bcrypt';
+// import bcrypt from 'bcrypt';
+import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import AppError from '../utils/AppError.js';
@@ -9,45 +11,53 @@ import PdfDocument from '../models/PdfDocument.js';
 
 // import { sendOTP } from "../utils/sendOtp.js";
 // REGISTER
-export const register = async (req, res) => {
+export const register = async (req, res, next) => {
     try {
-        const{name, password,email,phone,address,gender,role}= req.body;
-        if (!name || !email || !password || !phone || !address || !gender || !role) {
-            return res.json({ message: "All fields are required" });
-        }
-        if (password && password.length > 72) {
-    return res.status(400).json({ 
-        error: 'Password too long (max 72 characters)' 
-    });
-}
+        const { name, password, email, phone, address, gender, role } = req.body;
 
-        // Check if user already exists
-        
+        if (!name || !email || !password || !phone || !address || !gender || !role) {
+            return res.status(400).json({ message: "All fields are required" });
+        }
+
+        if (password.length > 72) {
+            return res.status(400).json({ message: "Password too long (max 72 characters)" });
+        }
+
+        // Check if user already exists (phone or email)
         const existingPhone = await User.findOne({ phone });
         if (existingPhone) {
-            return res.json({ message: " user with Phone number already exists" });
+            return res.status(409).json({ message: "User with this phone number already exists" });
         }
+
+        const existingEmail = await User.findOne({ email });
+        if (existingEmail) {
+            return res.status(409).json({ message: "User with this email already exists" });
+        }
+
         // Hash the password
         const hashedPassword = await bcrypt.hash(password, 10);
+
         const user = new User({
-            name ,
+            name,
             email,
-            password: hashedPassword 
-            ,phone,
+            password: hashedPassword,
+            phone,
             address,
             gender,
-            role
-            
+            role,
+            status: 'pending'
         });
         await user.save();
 
-        res.json({ message: "User created successfully" });
-    } catch (err) {
-        next(err);
-    }
+        res.status(200).json({
+            message: "Request sent to admin for approval. Please wait.",
+            status: "pending"
+        });
+
+    } catch (err) { next(err); }
 };
 // UPDATE USER
-export const update = async (req, res) => {
+export const update = async (req, res, next) => {
     try {
         //  get phone from token (set by authMiddleware)
         const phone = req.user.phone;
@@ -178,6 +188,47 @@ export const getUsers = async (req, res, next) => {
 //     }
 // };
 
+
+export const loginWithPassword = async (req, res, next) => {
+    try {
+        const { email, password } = req.body;
+
+        if (!email || !password)
+            return res.status(400).json({ message: "Email and password are required." });
+
+        const user = await User.findOne({ email });
+        if (!user || !user.password)
+            return res.status(401).json({ message: "Invalid email or password." });
+
+        if (user.status === 'pending')
+            return res.status(403).json({ message: "Awaiting admin approval.", status: "pending" });
+
+        if (user.status === 'rejected')
+            return res.status(403).json({ message: "Account rejected. Contact support.", status: "rejected" });
+
+        const isMatch = await bcrypt.compare(password, user.password);
+        if (!isMatch) {
+            user.activityLog.push({ action: 'password_login_failed', ip: req.ip });
+            await user.save();
+            return res.status(401).json({ message: "Invalid email or password." });
+        }
+
+        const accessToken  = generateAccessToken(user);
+        const refreshToken = generateRefreshToken(user);
+        user.refreshToken  = refreshToken;
+        user.activityLog.push({ action: 'login', ip: req.ip });
+        await user.save();
+
+        res.status(200).json({
+            message: "Login successful",
+            accessToken,
+            refreshToken,
+            user: { email: user.email, phone: user.phone, name: user.name, role: user.role }
+        });
+
+    } catch (err) { next(err); }
+};
+
 export const login = async (req, res, next) => {
     try {
         const { phone } = req.body;
@@ -262,6 +313,8 @@ export const verifyOtp = async (req, res, next) => {
 
     } catch (err) { next(err); }
 };
+
+
 // get pending user and update status for admin
 
 export const getPendingUsers = async (req, res, next) => {
@@ -340,7 +393,7 @@ export const refresh = async (req, res) => {
     }
 };
 
-export const getProfile = async (req, res) => {
+export const getProfile = async (req, res, next) => {
     try{
         const phone = req.user.phone;
         const user = await User.findOne({phone
@@ -567,3 +620,73 @@ export const getAdminInsights = async (req, res) => {
         return res.status(500).json({ success: false, error: 'Failed to fetch insights' });
     }
 };
+
+
+
+// STEP 1 — Request reset (generates token)
+export const forgotPassword = async (req, res, next) => {
+    try {
+        const { email } = req.body;
+        const user = await User.findOne({ email });
+
+        // Always respond the same way, even if user not found — avoids leaking which emails are registered
+        if (!user) {
+            return res.status(200).json({
+                message: "If that email is registered, a reset link has been sent."
+            });
+        }
+
+        // Generate raw token (sent to user) + hashed version (stored in DB)
+        const rawToken = crypto.randomBytes(32).toString('hex');
+        const hashedToken = crypto.createHash('sha256').update(rawToken).digest('hex');
+
+        user.resetPasswordToken  = hashedToken;
+        user.resetPasswordExpiry = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+        user.activityLog.push({ action: 'password_reset_request', ip: req.ip });
+        await user.save();
+
+        // DEV MODE — return token directly for Postman testing
+        if (process.env.NODE_ENV === 'development') {
+            console.log(`[DEV] Reset token for ${email}: ${rawToken}`);
+            return res.status(200).json({
+                message: "Reset token generated (dev mode)",
+                resetToken: rawToken
+            });
+        }
+
+        // await sendResetEmail(email, rawToken);   // real email in production
+        res.status(200).json({ message: "If that email is registered, a reset link has been sent." });
+
+    } catch (err) { next(err); }
+};
+
+// STEP 2 — Reset password using token
+export const resetPassword = async (req, res, next) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        if (newPassword.length > 72)
+            return res.status(400).json({ message: "Password too long (max 72 characters)" });
+
+        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+        const user = await User.findOne({
+            resetPasswordToken: hashedToken,
+            resetPasswordExpiry: { $gt: Date.now() }
+        });
+
+        if (!user)
+            return next(new AppError("Reset link is invalid or has expired.", 400));
+
+        user.password = await bcrypt.hash(newPassword, 10);
+        user.resetPasswordToken  = null;
+        user.resetPasswordExpiry = null;
+        user.refreshToken = null;   // force re-login everywhere, invalidate old sessions
+        user.activityLog.push({ action: 'password_reset_success', ip: req.ip });
+        await user.save();
+
+        res.status(200).json({ message: "Password reset successful. Please log in." });
+
+    } catch (err) { next(err); }
+};
+

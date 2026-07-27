@@ -66,6 +66,14 @@ const userSchema = new mongoose.Schema({
     bannedAt:  { type: Date },
     banReason: { type: String },
     
+    resetPasswordToken: { type: String,
+        default: null
+    },
+    resetPasswordExpiry: {
+        type: Date,
+        default: null
+    },
+    
     activityLog: [{
         action: { type: String },   // 'login', 'otp_request', 'otp_failed', 'logout'
         timestamp: { type: Date, default: Date.now },
