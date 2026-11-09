@@ -67,7 +67,7 @@ const callGroq = async (messages) => {
     if (!groq) throw new Error('Groq AI is not available.');
     try {
         const response = await groq.chat.completions.create({
-            model: 'llama-3.1-8b-instant',
+            model: 'openai/gpt-oss-20b',
             messages,
             max_tokens:  500,
             temperature: 0.7,
@@ -116,7 +116,7 @@ export const sendMessage = async (req, res) => {
 
         if(aiModel === 'groq') {
             reply = await callGroq(messagesForAPI);
-            modelUsed = 'Groq (llama3-8b)';
+            modelUsed = 'openai/gpt-oss-20b';
         } else {
             reply = await callSarvam(messagesForAPI);
             modelUsed = 'sarvam-105b-conversations';
