@@ -45,7 +45,7 @@ const callSarvam = async (messages) => {
     const response = await axios.post(
         SARVAM_API_URL,
         {
-            model:            'sarvam-30b',
+            model:            'sarvam-105b-conversations',
             messages,
             max_tokens:       300,
             temperature:      0.2,
@@ -119,7 +119,7 @@ export const sendMessage = async (req, res) => {
             modelUsed = 'Groq (llama3-8b)';
         } else {
             reply = await callSarvam(messagesForAPI);
-            modelUsed = 'Sarvam (sarvam-30b)';
+            modelUsed = 'sarvam-105b-conversations';
         }
         chatDoc.messages.push({ role: 'assistant', content: reply });
  
